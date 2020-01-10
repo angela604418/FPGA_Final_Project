@@ -5,7 +5,7 @@
 > 107321004 蕭名誼
 > 107321002 陳靖雯
 
-#### Input / Output to FPGA board
+### Input / Output to FPGA board
 - 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
 
 
@@ -23,7 +23,7 @@
 
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
 
-#### Four game level
+### Four game level
 - Level 1
 
 - Level 2
@@ -33,18 +33,18 @@
 - Level 4
 
 
-#### Result Demonstration
+### Result Demonstration
 
 - Success picture
 
 - Fail picture
 
-#### Function description
+### Function description
 - 闖關只有一個球的機會，可左右移動底版以便接球
 - 可將球反彈向上敲打磚塊，打擊一個即得一分
 - 若在球掉落前累積得到8分則可過關；反之，若在得到8分前讓球掉落至底板以下，即未接到球，則失敗。
 
-#### Program module description
+### Program module description
 ```verilog=
 module project(
     input CLK,
