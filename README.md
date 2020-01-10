@@ -39,6 +39,11 @@
 
 - Fail picture
 
+#### Function description
+- 闖關只有一個球的機會，可左右移動底版以便接球
+- 可將球反彈向上敲打磚塊，打擊一個即得一分
+- 若在球掉落前累積得到8分則可過關；反之，若在得到8分前讓球掉落至底板以下，即未接到球，則失敗。
+
 #### Program module description
 ```verilog=
 module project(
