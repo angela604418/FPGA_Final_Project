@@ -8,7 +8,7 @@
 ### Input / Output to FPGA board
 - 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
 
-
+![]()
 - LED light to record points (win -> LED)
 
 
@@ -20,14 +20,16 @@
 
 - Dip switch (pause, back, clear -> dip switch)
 
-
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/switch.png)
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
 
 ### Four game level
 - Level 1
 
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level1.png)
 - Level 2
 
+![](![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level2.png))
 - Level 3
 
 - Level 4
