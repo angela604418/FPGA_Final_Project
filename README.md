@@ -87,4 +87,4 @@ module project(
 );
 
 ```
-
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/Screen Shot 2020-01-10 at 4.35.09 PM.png)
