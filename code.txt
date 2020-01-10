@@ -1,3 +1,4 @@
+```verilog=
 module divfreq(input CLK, output reg CLK_div);
 	reg [24:0] Count;
 	always @(posedge CLK)
@@ -1952,3 +1953,4 @@ endmodule
 
 
 //辛苦助教看完他，ㄅ歉我們盡力了QQ 第五組祝您們新~年~快~樂~~^_^
+```
