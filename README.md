@@ -24,6 +24,11 @@
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
 
 
+#### Result Demonstration
+
+- Success picture
+
+- Fail picture
 
 #### Program module description
 ```verilog=
