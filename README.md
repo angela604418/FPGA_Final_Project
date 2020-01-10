@@ -12,7 +12,7 @@
 - LED light to record points (win -> LED)
 
 
-- Seven segments display showing the counter (COMM, LED_seg -> 7 segments display)
+- Seven segments display showing the counter (COM, LED_seg -> 7 segments display)(4 digits)
 
 
 - Four bits switch (sw_L, sw_R, shoot -> 4 bit SW)
@@ -22,6 +22,15 @@
 
 
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
+
+#### Four game level
+- Level 1
+
+- Level 2
+
+- Level 3
+
+- Level 4
 
 
 #### Result Demonstration
