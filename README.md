@@ -4,7 +4,7 @@
 > 107214005 田蕙瑜
 > 107321004 蕭名誼
 > 107321002 陳靖雯
----
+
 ### Input / Output to FPGA board
 - 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
 
