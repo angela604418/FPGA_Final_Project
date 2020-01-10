@@ -6,19 +6,19 @@
 > 107321002 陳靖雯
 
 #### Input / Output to FPGA board
-- 8 x 8 LED matrix for displaying live game (lightB,lightG,lightR,whichCol,EN -> 8x8 matrix)
+- 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
 
 
 - LED light to record points (win -> LED)
 
 
-- Seven segments display showing the counter (COMM,LED_seg -> 7 segments display)
+- Seven segments display showing the counter (COMM, LED_seg -> 7 segments display)
 
 
-- Four bits switch (sw_L,sw_R,shoot -> 4 bit SW)
+- Four bits switch (sw_L, sw_R, shoot -> 4 bit SW)
 
 
-- Dip switch (pause,back,clear -> dip switch)
+- Dip switch (pause, back, clear -> dip switch)
 
 
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
