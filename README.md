@@ -90,4 +90,4 @@ module project(
 ---
 ### Video demonstration
 
-[![watch the video](https://drive.google.com/open?id=1HlQyoBPQjhQUs0yRn-re6pHMcIIJ0opG.png)](https://drive.google.com/open?id=1HlQyoBPQjhQUs0yRn-re6pHMcIIJ0opG)
+[![watch the video](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/Screen%20Shot%202020-01-10%20at%204.35.09%20PM.png)](https://drive.google.com/open?id=1HlQyoBPQjhQUs0yRn-re6pHMcIIJ0opG)
