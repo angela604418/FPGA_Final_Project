@@ -37,7 +37,7 @@
 
 - Level 2
 
-![](![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level2.png))
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level2.png)
 
 - Level 3
 
