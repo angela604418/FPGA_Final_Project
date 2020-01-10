@@ -5,3 +5,5 @@
 > 107321004 蕭名誼
 > 107321002 陳靖雯
 
+- Input / Output to FPGA board
+
