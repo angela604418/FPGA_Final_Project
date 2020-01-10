@@ -1,0 +1,1954 @@
+module divfreq(input CLK, output reg CLK_div);
+	reg [24:0] Count;
+	always @(posedge CLK)
+	begin
+		if(Count > 50000)
+		begin
+			Count <= 24'b0;
+			CLK_div <= ~CLK_div;
+		end
+		else
+			Count <= Count + 1'b1;
+	end
+endmodule
+
+module divmove(input pause, input CLK, output reg CLK_div);
+	reg [24:0] Count;
+	always @(posedge CLK)
+	begin
+		if(Count > 4000000)
+		begin
+			Count <= 24'b0;
+			CLK_div <= ~CLK_div;
+		end
+		else
+		begin
+		   if(pause)
+				Count <= Count;
+			else
+				Count <= Count + 1'b1;
+	   end
+	end
+endmodule
+
+/* //lcd display memo
+module final(clk, RxD, LCD_RS, LCD_RW, LCD_E, LCD_DataBus);
+  input clk, RxD;
+  output LCD_RS, LCD_RW, LCD_E;
+  output [7:0] LCD_DataBus;
+
+  wire RxD_data_ready;
+  wire [7:0] RxD_data;
+  //async_receiver deserialer(.clk(clk), .RxD(RxD), .RxD_data_ready(RxD_data_ready), .RxD_data(RxD_data));
+
+  assign LCD_RW = 0;
+  assign LCD_DataBus = RxD_data;
+
+  wire Received_Escape = RxD_data_ready & (RxD_data==0);
+  wire Received_Data = RxD_data_ready & (RxD_data!=0);
+
+  reg [2:0] count;
+  always @(posedge clk) if(Received_Data | (count!=0)) count <= count + 1;
+
+  // activate LCD_E for 6 clocks, so at 25MHz, that's 6x40ns=240ns
+  reg LCD_E;
+  always @(posedge clk)
+  if(LCD_E==0)
+    LCD_E <= Received_Data;
+  else
+    LCD_E <= (count!=6);
+
+  reg LCD_instruction;
+  always @(posedge clk)
+  if(LCD_instruction==0)
+    LCD_instruction <= Received_Escape;
+  else
+    LCD_instruction <= (count!=7);
+
+  assign LCD_RS = ~LCD_instruction;
+
+endmodule
+*/
+/*	//倒數，沒成
+module count_backward_180(input CLK, input clear_180, output reg [3:0] T_count_0,output reg [3:0] T_count_1,output reg [3:0] T_count_2,output time_up_180, 
+                          output reg a,b,c,d,e,f,g, output reg [2 : 0]COM);    //time up when reaches 180 sec
+    divfreq F0(CLK, CLK_div);
+    reg [2 : 0] bit;
+
+    always @(posedge CLK_div, posedge clear_180)            //timer
+        begin 
+            if(clear_180)               //when to clear?? when about to count down!!!
+                begin
+                    T_count_0 <= 4'b0000;
+                    T_count_1 <= 4'b1000;
+                    T_count_2 <= 4'b0001;
+                    bit[0] = 0;
+                    bit[1] = 8;
+                    bit[2] = 1;
+                    time_up_180 = 0;
+                    clear_180 = 0;
+                end
+            else 
+                begin
+                    if(bit[0] == 0)
+                        begin
+                            if(bit[1] == 0)       //when count to 100 or 00
+                                begin
+                                    if(bit[2] == 0)       //when reaches 0
+                                        begin
+                                            time_up_180 = 1;
+                                            clear_180 = 1;        //could be deleted if 0 appears to short
+                                        end
+                                    else                    //when reaches 100
+                                        begin
+                                            bit[2] = bit[2] - 1;
+                                            T_count_2 <= T_count_2 - 1'b1;
+                                            T_count_0 <= 4'b1001;       //second_0's bit 0 -> 9
+                                            bit[0] = 9;
+                                            T_count_1 <= 4'b1001;       //second_1's bit 0 -> 9
+                                            bit[1] = 9;
+                                            if(bit[2] == 0)
+                                                T_count_2 <= 4'b1111;
+                                        end
+                                end
+                            else
+                                begin
+                                    T_count_0 <= 4'b1001;       //second_0's bit 0 -> 9
+                                    bit[0] = 9;
+                                    bit[1] = bit[1] - 1;
+                                    T_count_1 <= T_count_1 - 1'b1;
+                                    if(bit[1] == 0)
+                                        begin
+                                            T_count_1 <= 4'b1111;
+                                        end
+                                end
+                        end
+                    else
+                        begin
+                            T_count_0 <= T_count_0 - 1'b1;
+                            bit[0] = bit[0] - 1;
+                        end
+                end
+          seven_segment_display seg0(T_count_0, a,b,c,d,e,f,g);   //display current time on seven segment
+          seven_segment_display seg1(T_count_1, a,b,c,d,e,f,g);   //same a,b,c,d,e,f,g???
+          seven_segment_display seg2(T_count_2, a,b,c,d,e,f,g);
+        end    //end of always @()
+endmodule     //end of count_backward_180  	
+*/
+
+module final_project(input CLK,input clear,input sw_L,input sw_R,input shoot,input pause,
+					 input [3:0] back,
+					 output [7:0] lightR,output [7:0] lightG,output [7:0] lightB,
+					 output reg [2:0] whichCol,output EN,output reg[7:0] win,
+                output reg beep,output reg [3:0] COMM,output reg [6:0] LED_seg
+);
+
+reg [7:0] state [7:0];
+reg [7:0] stateR [7:0];
+reg [7:0] stateG [7:0];
+reg [7:0] stateB [7:0];
+integer i, panel_center, alreadyShoot, ball_x, ball_y, direction, forward, go_mode, level, point;
+//reg flag; //結束停下來，沒成
+reg [22:0] k;
+reg clk_4hz;
+reg [16:0] count,div_num;//
+reg [7:0] music;
+
+always @(posedge CLK)//4hz
+	begin
+		if(k==23'h47868c)
+			begin
+				k<=0;
+				clk_4hz=~clk_4hz;
+			end
+		else
+			k=k+1'b1;
+	end
+  
+always @(posedge clk_4hz)
+	begin
+		if(music==8'd66)
+			music<=0;
+		else
+			music<=music+1'b1;
+	end
+
+always @(posedge CLK)
+	begin
+		if(count==div_num)
+			begin
+				count<=0;
+				beep=~beep;
+			end
+		else
+			count<=count+1'b1;
+	end
+    parameter 
+    L1=17'h1754e,
+    L2=17'h14c81,
+    L3=17'h1284a,
+    L4=17'h117A8,
+    L5=17'h14e70,
+    L6=17'h0ddf2,
+    L7=17'h0c5ba,
+    M1=17'h0ba9e,//DO
+    M2=17'h0a648,//RE
+    M3=17'h0941f,//ME
+    M4=17'h08bcf,//FA
+    M5=17'h07c90,//SO
+    M6=17'h06ef9,//LA
+    M7=17'h062dd,//SI
+    H1=17'h05d68,
+    H2=17'h05322,
+    H3=17'h04a11,
+    H4=17'h045e9,
+    H5=17'h3e48,
+    H6=17'h377d,
+    H7=17'h316f;
+  
+always @(posedge clk_4hz)
+	begin
+      case(music)
+      8'd0 : div_num=M5;
+      8'd1 : div_num=M5;
+      8'd2 : div_num=M3;  
+      8'd3 : div_num=M3;
+      8'd4 : div_num=M3;
+      8'd5 : div_num=M3;
+      8'd6 : div_num=0;
+      8'd7 : div_num=0;
+      8'd8 : div_num=M4;
+      8'd9 : div_num=M4;
+      8'd10 : div_num=M2;
+      8'd11 : div_num=M2;
+      8'd12 : div_num=M2;
+      8'd13 : div_num=M2;
+      8'd14 : div_num=0;
+      8'd15 : div_num=0;
+      8'd16 : div_num=M1;
+      8'd17 : div_num=M1;
+      8'd18 : div_num=M2;
+      8'd19 : div_num=M2;
+      8'd20 : div_num=M3;
+      8'd21 : div_num=M3;
+      8'd22 : div_num=M4;
+      8'd23 : div_num=M4;
+      8'd24 : div_num=M5;
+      8'd25 : div_num=M5;
+      8'd26 : div_num=M5;
+      8'd27 : div_num=M5;
+      8'd28 : div_num=M5;
+      8'd29 : div_num=M5;
+      8'd30 : div_num=0;
+      8'd31 : div_num=0;
+      8'd32 : div_num=M5;
+      8'd33 : div_num=M5;
+      8'd34 : div_num=M3;
+      8'd35 : div_num=M3;
+      8'd36 : div_num=M3;
+      8'd37 : div_num=M3;
+      8'd38 : div_num=0;
+      8'd39 : div_num=0;
+      8'd40 : div_num=M4;
+      8'd41 : div_num=M4;
+      8'd42 : div_num=M2;
+      8'd43 : div_num=M2;
+      8'd44 : div_num=M2;
+      8'd45 : div_num=M2;
+      8'd46 : div_num=0;
+      8'd47 : div_num=0;
+      8'd48 : div_num=M1;
+      8'd49 : div_num=M1;
+      8'd50 : div_num=M3;
+      8'd51 : div_num=M3;
+      8'd52 : div_num=M5;
+      8'd53 : div_num=M5;
+      8'd54 : div_num=M5;
+      8'd55 : div_num=M5;
+      8'd56 : div_num=M1;
+      8'd57 : div_num=M1;
+      8'd58 : div_num=M1;
+      8'd59 : div_num=M1;
+      8'd60 : div_num=M1;
+      8'd61 : div_num=M1;
+      8'd62 : div_num=M1;
+      8'd63 : div_num=M1;
+      8'd64 : div_num=0;
+      8'd65 : div_num=0;
+
+      endcase
+    end
+	 
+	 
+initial
+begin
+   level = 0;
+	panel_center = 4;
+	whichCol=0;
+	alreadyShoot = 0;
+	ball_x = 4;
+	ball_y = 6;
+	go_mode = 11;
+	point = 0;
+	//flag <= 0;
+end
+
+divfreq f0(CLK, CLK_div);
+divmove f1(pause, CLK, CLK_move);
+//breakout f2(CLK,clear,COM,seg);
+
+reg [26:0] one_second_counter; // counter for generating 1 second clock enable
+wire one_second_enable;// one second enable for counting numbers
+reg [15:0] displayed_number; // counting number to be displayed
+reg [3:0] LED_BCD;
+reg [19:0] refresh_counter; // 20-bit for creating 10.5ms refresh period or 380Hz refresh rate
+             // the first 2 MSB bits for creating 4 LED-activating signals with 2.6ms digit period
+wire [1:0] LED_activating_counter; 
+                 // count  0 -> 1 -> 2 -> 3 , activates  LED1  LED2  LED3  LED4,and repeat
+  always @(posedge CLK or posedge clear)
+    begin
+		//if(flag==1)
+				 //one_second_counter <= 0;
+      if(clear==1)
+            one_second_counter <= 0;
+        else
+		  begin
+            if(one_second_counter>=99999999)
+                 one_second_counter <= 0;
+            else
+                one_second_counter <= one_second_counter + 1;
+        end
+    end
+    assign one_second_enable = (one_second_counter==99999999)?1:0;
+  always @(posedge CLK or posedge clear)
+    begin
+      if(clear==1)
+            displayed_number <= 0;
+        else if(one_second_enable==1)
+		  begin
+            displayed_number <= displayed_number + 1;
+				if(displayed_number>1000)
+					displayed_number <= 0;
+			end
+    end
+  always @(posedge CLK or posedge clear)
+    begin 
+      if(clear==1)
+            refresh_counter <= 0;
+        else
+            refresh_counter <= refresh_counter + 1;
+    end 
+    assign LED_activating_counter = refresh_counter[19:18];
+    
+  always @(*)
+    begin
+        case(LED_activating_counter)
+        2'b00: begin
+            COMM = 4'b0111; 
+            // activate LED1 and Deactivate LED2, LED3, LED4
+            LED_BCD = displayed_number/1000;
+            // the first digit of the 16-bit number
+              end
+        2'b01: begin
+            COMM = 4'b1011; 
+            // activate LED2 and Deactivate LED1, LED3, LED4
+            LED_BCD = (displayed_number % 1000)/100;
+            // the second digit of the 16-bit number
+              end
+        2'b10: begin
+            COMM = 4'b1101; 
+            // activate LED3 and Deactivate LED2, LED1, LED4
+            LED_BCD = ((displayed_number % 1000)%100)/10;
+            // the third digit of the 16-bit number
+                end
+        2'b11: begin
+            COMM = 4'b1110; 
+            // activate LED4 and Deactivate LED2, LED3, LED1
+            LED_BCD = ((displayed_number % 1000)%100)%10;
+            // the fourth digit of the 16-bit number    
+               end
+        endcase
+    end
+  
+    always @(*)
+    begin
+        case(LED_BCD)
+        4'b0000: LED_seg = 7'b0000001; // "0"     
+        4'b0001: LED_seg = 7'b1001111; // "1" 
+        4'b0010: LED_seg = 7'b0010010; // "2" 
+        4'b0011: LED_seg = 7'b0000110; // "3" 
+        4'b0100: LED_seg = 7'b1001100; // "4" 
+        4'b0101: LED_seg = 7'b0100100; // "5" 
+        4'b0110: LED_seg = 7'b0100000; // "6" 
+        4'b0111: LED_seg = 7'b0001111; // "7" 
+        4'b1000: LED_seg = 7'b0000000; // "8"     
+        4'b1001: LED_seg = 7'b0000100; // "9" 
+        default: LED_seg = 7'b0000001; // "0"
+        endcase
+    end
+
+
+always @(posedge CLK_move)
+begin
+	case (back)
+	    4'b0000: level=0;
+		 4'b0001: level=1;
+       4'b0010: level=2;
+       4'b0100: level=3;
+       4'b1000: level=4;
+   endcase
+	
+	if(level==3)
+	begin
+	  win<=8'b00000000;  
+	  for (i=0;i<8;i=i+1)
+	  begin//背景形狀+顏色
+       state[i] = 8'b00000001;
+		 stateR[i] = 8'b00000000;
+		 stateG[i] = 8'b00000001;
+		 stateB[i] = 8'b00000001;
+	    if (i>=3 & i<=5)
+		 begin//
+		   state[i][7]=1;
+			stateR[i][7]=0;
+			stateG[i][7]=0;
+			stateB[i][7]=1;
+		 end
+		 if (i==4)
+		 begin
+         state[i][6] = 1;
+			stateR[i][6] = 1;
+			stateG[i][6] = 1;
+			stateB[i][6] = 1;
+		 end
+	  end
+	end
+	
+	if(level==2)
+	begin
+	  win<=8'b00000000;
+	  for (i=0;i<8;i=i+1)
+	  begin
+	  if(i == 0 || i == 7)
+	  begin
+       state[i] = 8'b00001111;
+		 stateR[i] = 8'b00000000;
+		 stateG[i] = 8'b00001111;
+		 stateB[i] = 8'b00000000;
+		 end
+		 else
+		 begin
+		 state[i] = 8'b00001001;
+		 stateR[i] = 8'b00000000;
+		 stateG[i] = 8'b00001001;
+		 stateB[i] = 8'b00000000;
+		 end
+	    if (i>=3 & i<=5)
+		 begin
+		   state[i][7]=1;
+			stateR[i][7]=0;
+			stateG[i][7]=0;
+			stateB[i][7]=1;
+		 end
+		 if (i==4)
+		 begin
+         state[i][6] = 1;
+			stateR[i][6] = 1;
+			stateG[i][6] = 1;
+			stateB[i][6] = 1;
+		 end
+	  end
+	end
+	
+	if(level==1)
+	begin
+	  win<=8'b00000000;
+	  for (i=0;i<8;i=i+1)
+	  begin
+       state[i] = 8'b00001111;
+	    stateR[i] = 8'b00000000;
+		 stateG[i] = 8'b00001111;
+		 stateB[i] = 8'b00001111;
+	    if (i>=3 & i<=5)
+		 begin
+		   state[i][7]=1;
+			stateR[i][7]=0;
+			stateG[i][7]=0;
+			stateB[i][7]=1;
+		 end
+		 if (i==4)
+		 begin
+         state[i][6] = 1;
+			stateR[i][6] = 1;
+			stateG[i][6] = 1;
+			stateB[i][6] = 1;
+		 end
+	  end
+	end
+	
+	if(level==4)
+	begin
+	  win<=8'b00000000;
+	  state[0] = 8'b00001000;
+	  state[1] = 8'b00010100;
+	  state[2] = 8'b00100010;
+	  state[3] = 8'b00000001;
+  	  state[4] = 8'b00000001;
+	  state[5] = 8'b00100010;
+	  state[6] = 8'b00010100;
+	  state[7] = 8'b00001000;
+	  
+	  stateR[0] = 8'b00001000;
+	  stateR[1] = 8'b00010100;
+	  stateR[2] = 8'b00100010;
+	  stateR[3] = 8'b00000001;
+  	  stateR[4] = 8'b00000001;
+	  stateR[5] = 8'b00100010;
+	  stateR[6] = 8'b00010100;
+	  stateR[7] = 8'b00001000;
+	  
+	  stateG[0] = 8'b00001000;
+	  stateG[1] = 8'b00010100;
+	  stateG[2] = 8'b00100010;
+	  stateG[3] = 8'b00000001;
+  	  stateG[4] = 8'b00000001;
+	  stateG[5] = 8'b00100010;
+	  stateG[6] = 8'b00010100;
+	  stateG[7] = 8'b00001000;
+	  
+	  stateB[0] = 8'b00000000;
+	  stateB[1] = 8'b00000000;
+	  stateB[2] = 8'b00000000;
+	  stateB[3] = 8'b00000000;
+  	  stateB[4] = 8'b00000000;
+	  stateB[5] = 8'b00000000;
+	  stateB[6] = 8'b00000000;
+	  stateB[7] = 8'b00000000;
+	  for (i=0;i<8;i=i+1)
+	  begin
+	    if (i>=3 & i<=5)
+		 begin
+		   state[i][7]=1;
+			stateR[i][7]=0;
+			stateG[i][7]=0;
+			stateB[i][7]=1;
+		 end
+		 if (i==4)
+		 begin
+         state[i][6] = 1;
+			stateR[i][6] = 1;
+			stateG[i][6] = 1;
+			stateB[i][6] = 1;
+		 end
+	  end
+	end
+	
+	if(level==0)//開始玩
+	begin
+	if(point>0)
+	begin
+	   if(point==0)   win<=8'b00000000;
+		else if(point==1)   win<=8'b00000001;
+		else if(point==2)   win<=8'b00000011;
+		else if(point==3)   win<=8'b00000111;
+		else if(point==4)   win<=8'b00001111;
+	   else if(point==5)   win<=8'b00011111;
+	   else if(point==6)   win<=8'b00111111;
+	   else if(point==7)   win<=8'b01111111;
+	   else if(point==8)   
+		begin //贏了
+		   win<=8'b11111111;
+				state[0] = 8'b00100000; 
+            state[1] = 8'b01001100;
+            state[2] = 8'b10001100;
+            state[3] = 8'b10000000;
+            state[4] = 8'b10000000;
+            state[5] = 8'b01001100;
+            state[6] = 8'b00101100;
+            state[7] = 8'b00000000;
+			
+				stateR[0] = 8'b00100000; 
+            stateR[1] = 8'b01001100;
+            stateR[2] = 8'b10001100;
+            stateR[3] = 8'b10000000;
+            stateR[4] = 8'b10000000;
+            stateR[5] = 8'b01001100;
+            stateR[6] = 8'b00101100;
+            stateR[7] = 8'b00000000;
+
+            stateG[0] = 8'b00000000;            
+            stateG[1] = 8'b00000000;
+            stateG[2] = 8'b00000000;
+            stateG[3] = 8'b00000000;
+            stateG[4] = 8'b00000000;
+            stateG[5] = 8'b00000000;
+            stateG[6] = 8'b00000000;
+            stateG[7] = 8'b00000000;
+
+            stateB[0] = 8'b00100000; 
+            stateB[1] = 8'b01001100;
+            stateB[2] = 8'b10001100;
+            stateB[3] = 8'b10000000;
+            stateB[4] = 8'b10000000;
+            stateB[5] = 8'b01001100;
+            stateB[6] = 8'b00101100;
+            stateB[7] = 8'b00000000;
+				
+				//displayed_number <= 0;
+			//flag <= 1;
+			
+			level=0;
+			panel_center = 4;
+			alreadyShoot = 0;
+			ball_x = 4;
+			ball_y = 6;
+			go_mode = 11;
+			point=0;
+		end
+	end
+	
+	if (sw_L)
+	begin
+		if (panel_center-2 >= 0)//防超出邊界
+		begin
+			panel_center = panel_center - 1;
+			if (alreadyShoot==0)
+			begin
+				state[panel_center][6]=1;
+				stateR[panel_center][6]=0;
+				stateG[panel_center][6]=0;
+				stateB[panel_center][6]=1;
+				state[panel_center+1][6]=0;
+				stateR[panel_center+1][6]=0;
+				stateG[panel_center+1][6]=0;
+				stateB[panel_center+1][6]=0;
+				ball_x = ball_x - 1;
+			end
+			state[panel_center-1][7]=1;
+			stateR[panel_center-1][7]=0;
+			stateG[panel_center-1][7]=0;
+			stateB[panel_center-1][7]=1;
+			state[panel_center+2][7]=0;
+			stateR[panel_center+2][7]=0;
+			stateG[panel_center+2][7]=0;
+			stateB[panel_center+2][7]=0;
+		end
+	end
+	
+	if (sw_R)
+	begin
+		if (panel_center+2 <= 7)
+		begin
+			panel_center = panel_center + 1;
+			if (alreadyShoot==0)
+			begin
+				state[panel_center][6]=1;
+				stateR[panel_center][6]=0;
+				stateG[panel_center][6]=0;
+				stateB[panel_center][6]=1;
+				state[panel_center-1][6]=0;
+				stateR[panel_center-1][6]=0;
+				stateG[panel_center-1][6]=0;
+				stateB[panel_center-1][6]=0;
+
+				ball_x = ball_x + 1;
+			end
+			state[panel_center+1][7]=1;
+			stateR[panel_center+1][7]=0;
+			stateG[panel_center+1][7]=0;
+			stateB[panel_center+1][7]=1;
+			state[panel_center-2][7]=0;
+			stateR[panel_center-2][7]=0;
+			stateG[panel_center-2][7]=0;
+			stateB[panel_center-2][7]=0;
+		end
+	end
+		
+	if (shoot)
+	begin
+		state[ball_x][ball_y] = 0;
+		stateR[ball_x][ball_y] = 0;
+		stateG[ball_x][ball_y] = 0;
+		stateB[ball_x][ball_y] = 0;
+		alreadyShoot = 1;
+		go_mode = 11;
+	end	
+		
+	if (alreadyShoot)
+	begin
+		case(go_mode)
+		11:     //直上
+		begin
+			state[ball_x][ball_y] = 0;
+			stateR[ball_x][ball_y] = 0;
+			stateG[ball_x][ball_y] = 0;
+			stateB[ball_x][ball_y] = 0;
+			ball_y = ball_y - 1;
+			if (state[ball_x][ball_y]==1&&ball_y>=0)
+			begin
+			   point=point+1;
+				ball_y = ball_y + 2;
+				state[ball_x][ball_y] = 1;	
+				stateR[ball_x][ball_y] = 1;	
+				stateG[ball_x][ball_y] = 1;	
+				stateB[ball_x][ball_y] = 1;	
+				go_mode = 21;
+				if (state[ball_x][ball_y-2]==1)
+				begin
+					state[ball_x][ball_y-2] = 0;
+					stateR[ball_x][ball_y-2] = 0;
+					stateG[ball_x][ball_y-2] = 0;
+					stateB[ball_x][ball_y-2] = 0;
+				end
+			end
+			else if(ball_y<0)
+			begin
+			   ball_y = ball_y + 2;
+				state[ball_x][ball_y] = 1;	
+				stateR[ball_x][ball_y] = 1;	
+				stateG[ball_x][ball_y] = 1;	
+				stateB[ball_x][ball_y] = 1;	
+				go_mode = 21;
+				if (state[ball_x][ball_y-2]==1)
+				begin
+					state[ball_x][ball_y-2] = 0;
+					stateR[ball_x][ball_y-2] = 0;
+					stateG[ball_x][ball_y-2] = 0;
+					stateB[ball_x][ball_y-2] = 0;
+				end
+			end
+			else
+			begin
+				state[ball_x][ball_y] = 1;
+				stateR[ball_x][ball_y] = 1;
+				stateG[ball_x][ball_y] = 1;
+				stateB[ball_x][ball_y] = 1;
+			end
+		end
+		12:     //左上
+		begin
+			state[ball_x][ball_y] = 0;
+			stateR[ball_x][ball_y] = 0;
+			stateG[ball_x][ball_y] = 0;
+			stateB[ball_x][ball_y] = 0;
+			if (ball_x==0||ball_y==0)//左邊界或上邊界
+			begin
+			   if(ball_x==0&&ball_y==0)//左上的腳
+				begin
+				   ball_x=ball_x+1;
+					ball_y=ball_y+1;
+					state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode= 23;
+				end
+				else if(ball_x==0)//左邊界
+				begin
+					if(state[ball_x+1][ball_y-1]==1)
+					begin
+						state[ball_x+1][ball_y-1]=0;
+						stateR[ball_x+1][ball_y-1]=0;
+						stateG[ball_x+1][ball_y-1]=0;
+						stateB[ball_x+1][ball_y-1]=0;
+						point=point+1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=23;
+					end
+				   else
+					begin
+						ball_x=ball_x+1;
+						ball_y=ball_y-1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=13;
+					end
+				end
+				else
+				begin
+					ball_x=ball_x-1;
+					ball_y=ball_y+1;
+					state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=22;
+				end			
+			end
+			else
+			begin
+				if(state[ball_x-1][ball_y-1]==1)//打到磚塊
+				begin
+				   state[ball_x-1][ball_y-1]=0;
+					stateR[ball_x-1][ball_y-1]=0;
+					stateG[ball_x-1][ball_y-1]=0;
+					stateB[ball_x-1][ball_y-1]=0;
+					point=point+1;
+					go_mode=23;//右下
+				end
+				else
+				begin
+				   ball_x=ball_x-1;
+					ball_y=ball_y-1;
+					state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=12;
+				end
+			end
+		end
+		13:     //右上
+		begin
+			state[ball_x][ball_y] = 0;
+			stateR[ball_x][ball_y] = 0;
+			stateG[ball_x][ball_y] = 0;
+			stateB[ball_x][ball_y] = 0;
+			if (ball_x==7||ball_y==0)//右邊界或上邊界
+			begin
+			   if(ball_x==7&&ball_y==0)//右上的腳
+				begin
+				   ball_x=ball_x-1;
+					ball_y=ball_y+1;
+					state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode= 22;//左下
+				end
+				else if(ball_x==7)//右邊界
+				begin
+					if(state[ball_x-1][ball_y-1]==1)
+					begin
+						state[ball_x-1][ball_y-1]=0;
+						stateR[ball_x-1][ball_y-1]=0;
+						stateG[ball_x-1][ball_y-1]=0;
+						stateB[ball_x-1][ball_y-1]=0;
+						point=point+1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=22;
+					end
+				   else
+					begin
+						ball_x=ball_x-1;
+						ball_y=ball_y-1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=12;
+					end
+				end
+				else//上邊界
+				begin
+					ball_x=ball_x+1;
+					ball_y=ball_y+1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					state[ball_x][ball_y]=1;
+					go_mode=23;
+				end			
+			end
+			else//沒有打到邊界們
+			begin
+				if(state[ball_x+1][ball_y-1]==1)//打到磚塊
+				begin
+					state[ball_x+1][ball_y-1]=0;
+					stateR[ball_x+1][ball_y-1]=0;
+					stateG[ball_x+1][ball_y-1]=0;
+					stateB[ball_x+1][ball_y-1]=0;
+					point=point+1;
+					go_mode=22;//左下
+				end
+				else//持續右上
+				begin
+				   ball_x=ball_x+1;
+					ball_y=ball_y-1;
+					state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=13;
+				end
+			end
+		end
+		21:      //直下
+		begin
+			state[ball_x][ball_y] = 0;
+			stateR[ball_x][ball_y] = 0;
+			stateG[ball_x][ball_y] = 0;
+			stateB[ball_x][ball_y] = 0;
+			if (ball_y==6 && ball_x >= panel_center-1 && ball_x <= panel_center+1)    //打到平台
+			begin
+				ball_y = ball_y - 1;
+				if (ball_x == panel_center)     //打到平台中間
+				begin
+					go_mode = 11;
+					state[ball_x][ball_y] = 1;
+					stateR[ball_x][ball_y] = 1;
+					stateG[ball_x][ball_y] = 1;
+					stateB[ball_x][ball_y] = 1;
+				end
+				else //左或右                         
+				begin
+					if (ball_x == panel_center-1)  //打到平台左邊
+					begin
+						go_mode = 12;//左上
+						if (ball_x-1 < 0)//左邊界
+						begin
+							ball_x = ball_x + 1;
+							state[ball_x][ball_y] = 1;
+							stateR[ball_x][ball_y] = 1;
+							stateG[ball_x][ball_y] = 1;
+							stateB[ball_x][ball_y] = 1;
+							go_mode = 13;//右上
+						end
+						else//一直左上
+						begin
+							ball_x = ball_x - 1;
+							state[ball_x][ball_y] = 1;
+							stateR[ball_x][ball_y] = 1;
+							stateG[ball_x][ball_y] = 1;
+							stateB[ball_x][ball_y] = 1;
+						end
+					end
+					else                           //打到平台右邊
+					begin
+						go_mode = 13;//右上
+						if (ball_x + 1 > 7)//右邊界
+						begin
+							ball_x = ball_x - 1;
+							go_mode = 12;//左上
+							state[ball_x][ball_y] = 1;
+							stateR[ball_x][ball_y] = 1;
+						   stateG[ball_x][ball_y] = 1;
+							stateB[ball_x][ball_y] = 1;
+						end
+						else//一直右上
+						begin
+							ball_x = ball_x + 1;
+							state[ball_x][ball_y] = 1;
+							stateR[ball_x][ball_y] = 1;
+							stateG[ball_x][ball_y] = 1;
+							stateB[ball_x][ball_y] = 1;
+						end
+					end
+				end
+			end
+			else//沒有打到平台
+			begin
+				if (ball_y==7)//掉下去
+				begin
+						state[0] = 8'b10000010;
+                    state[1] = 8'b01001110;
+                    state[2] = 8'b00100010;
+                    state[3] = 8'b00100000;
+                    state[4] = 8'b00100000;
+                    state[5] = 8'b01000010;
+                    state[6] = 8'b10001110;
+                    state[7] = 8'b00000010;
+					
+							stateR[0] = 8'b10000010;
+                    stateR[1] = 8'b01001110;
+                    stateR[2] = 8'b00100010;
+                    stateR[3] = 8'b00100000;
+                    stateR[4] = 8'b00100000;
+                    stateR[5] = 8'b01000010;
+                    stateR[6] = 8'b10001110;
+                    stateR[7] = 8'b00000010;
+
+                    stateG[0] = 8'b00000000;
+                    stateG[1] = 8'b00000000;
+                    stateG[2] = 8'b00000000;
+                    stateG[3] = 8'b00000000;
+                    stateG[4] = 8'b00000000;
+                    stateG[5] = 8'b00000000;
+                    stateG[6] = 8'b00000000;
+                    stateG[7] = 8'b00000000;
+
+                    stateB[0] = 8'b00000000;
+                    stateB[1] = 8'b00000000;
+                    stateB[2] = 8'b00000000;
+                    stateB[3] = 8'b00000000;
+                    stateB[4] = 8'b00000000;
+                    stateB[5] = 8'b00000000;
+                    stateB[6] = 8'b00000000;
+                    stateB[7] = 8'b00000000;
+						  //displayed_number <= 0;
+						  //flag <= 1;
+					win<=8'b00000000;
+					level=0;
+					panel_center = 4;
+					alreadyShoot = 0;
+					ball_x = 4;
+					ball_y = 6;
+					go_mode = 11;
+					point=0;
+				end
+				else//一直往下
+				begin
+					if(state[ball_x][ball_y+1] == 1)
+					begin
+						state[ball_x][ball_y+1] = 0;
+						stateR[ball_x][ball_y+1] = 0;
+						stateG[ball_x][ball_y+1] = 0;
+						stateB[ball_x][ball_y+1] = 0;
+						point=point+1;
+						ball_y = ball_y - 1;
+						state[ball_x][ball_y] = 1;
+						stateR[ball_x][ball_y] = 1;
+						stateG[ball_x][ball_y] = 1;
+						stateB[ball_x][ball_y] = 1;
+						go_mode=11;
+					end
+					else
+					begin
+						ball_y = ball_y + 1;
+						state[ball_x][ball_y] = 1;
+						stateR[ball_x][ball_y] = 1;
+						stateG[ball_x][ball_y] = 1;
+						stateB[ball_x][ball_y] = 1;
+					end
+				end
+			end
+		end
+		22:      //左下
+		begin
+		   state[ball_x][ball_y] = 0;
+			stateR[ball_x][ball_y] = 0;
+			stateG[ball_x][ball_y] = 0;
+			stateB[ball_x][ball_y] = 0;
+			if(ball_y==7)//失敗
+			begin
+						state[0] = 8'b10000010;
+                    state[1] = 8'b01001110;
+                    state[2] = 8'b00100010;
+                    state[3] = 8'b00100000;
+                    state[4] = 8'b00100000;
+                    state[5] = 8'b01000010;
+                    state[6] = 8'b10001110;
+                    state[7] = 8'b00000010;
+					
+							stateR[0] = 8'b10000010;
+                    stateR[1] = 8'b01001110;
+                    stateR[2] = 8'b00100010;
+                    stateR[3] = 8'b00100000;
+                    stateR[4] = 8'b00100000;
+                    stateR[5] = 8'b01000010;
+                    stateR[6] = 8'b10001110;
+                    stateR[7] = 8'b00000010;
+
+                    stateG[0] = 8'b00000000;
+                    stateG[1] = 8'b00000000;
+                    stateG[2] = 8'b00000000;
+                    stateG[3] = 8'b00000000;
+                    stateG[4] = 8'b00000000;
+                    stateG[5] = 8'b00000000;
+                    stateG[6] = 8'b00000000;
+                    stateG[7] = 8'b00000000;
+
+                    stateB[0] = 8'b00000000;
+                    stateB[1] = 8'b00000000;
+                    stateB[2] = 8'b00000000;
+                    stateB[3] = 8'b00000000;
+                    stateB[4] = 8'b00000000;
+                    stateB[5] = 8'b00000000;
+                    stateB[6] = 8'b00000000;
+                    stateB[7] = 8'b00000000;
+						  //displayed_number <= 0
+						  //flag <= 1;
+				win<=8'b00000000;
+				level=0;
+				panel_center = 4;
+				alreadyShoot = 0;
+				ball_x = 4;
+				ball_y = 6;
+				go_mode = 11;
+				point=0;
+			end
+			else
+			begin
+			   if(ball_y==6)
+				begin
+					if((ball_x==panel_center||ball_x==panel_center+1||ball_x==panel_center-1))//打到板子
+					begin
+						if(ball_x==panel_center)
+						begin
+							ball_y=ball_y-1;
+							state[ball_x][ball_y]=1;
+							stateR[ball_x][ball_y]=1;
+							stateG[ball_x][ball_y]=1;
+							stateB[ball_x][ball_y]=1;
+							go_mode=11;
+						end
+						else if(ball_x==panel_center-1)//打到底板左邊
+						begin
+							ball_x=ball_x-1;
+							ball_y=ball_y-1;
+							state[ball_x][ball_y]=1;
+							stateR[ball_x][ball_y]=1;
+							stateG[ball_x][ball_y]=1;
+							stateB[ball_x][ball_y]=1;
+							go_mode=12;
+						end
+						else//打到底板右邊
+						begin
+							ball_x=ball_x+1;
+							ball_y=ball_y-1;
+							state[ball_x][ball_y]=1;
+							stateR[ball_x][ball_y]=1;
+							stateG[ball_x][ball_y]=1;
+							stateB[ball_x][ball_y]=1;
+							go_mode=13;
+						end
+					end
+					else
+					begin//y+1
+						ball_x=ball_x-1;
+						ball_y=ball_y+1;				
+					end
+				end
+				else if(ball_x==0)//左邊界
+				begin
+				   if(state[ball_x+1][ball_y+1]==1)
+					begin
+					   state[ball_x+1][ball_y+1]=0;
+						stateR[ball_x+1][ball_y+1]=0;
+						stateG[ball_x+1][ball_y+1]=0;
+						stateB[ball_x+1][ball_y+1]=0;
+						point=point+1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=13;
+					end
+					else
+					begin
+						ball_x=ball_x+1;
+						ball_y=ball_y+1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=23;
+					end
+				end
+				else if(state[ball_x-1][ball_y+1]==1)//打到磚塊
+				begin
+				   state[ball_x-1][ball_y+1]=0;
+					stateR[ball_x-1][ball_y+1]=0;
+					stateG[ball_x-1][ball_y+1]=0;
+					stateB[ball_x-1][ball_y+1]=0;
+					point=point+1;
+					ball_x=ball_x+1;
+					ball_y=ball_y-1;
+				   state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=13;
+				end
+				else//持續左下
+				begin
+				   ball_x=ball_x-1;
+					ball_y=ball_y+1;
+				   state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=22;
+				end
+			end
+		end
+		23:      //右下
+		begin
+		   state[ball_x][ball_y] = 0;
+			stateR[ball_x][ball_y] = 0;
+			stateG[ball_x][ball_y] = 0;
+			stateB[ball_x][ball_y] = 0;
+			if(ball_y==7)//失敗
+			begin
+						  state[0] = 8'b10000010;
+                    state[1] = 8'b01001110;
+                    state[2] = 8'b00100010;
+                    state[3] = 8'b00100000;
+                    state[4] = 8'b00100000;
+                    state[5] = 8'b01000010;
+                    state[6] = 8'b10001110;
+                    state[7] = 8'b00000010;
+					
+							stateR[0] = 8'b10000010;
+                    stateR[1] = 8'b01001110;
+                    stateR[2] = 8'b00100010;
+                    stateR[3] = 8'b00100000;
+                    stateR[4] = 8'b00100000;
+                    stateR[5] = 8'b01000010;
+                    stateR[6] = 8'b10001110;
+                    stateR[7] = 8'b00000010;
+
+                    stateG[0] = 8'b00000000;
+                    stateG[1] = 8'b00000000;
+                    stateG[2] = 8'b00000000;
+                    stateG[3] = 8'b00000000;
+                    stateG[4] = 8'b00000000;
+                    stateG[5] = 8'b00000000;
+                    stateG[6] = 8'b00000000;
+                    stateG[7] = 8'b00000000;
+
+                    stateB[0] = 8'b00000000;
+                    stateB[1] = 8'b00000000;
+                    stateB[2] = 8'b00000000;
+                    stateB[3] = 8'b00000000;
+                    stateB[4] = 8'b00000000;
+                    stateB[5] = 8'b00000000;
+                    stateB[6] = 8'b00000000;
+                    stateB[7] = 8'b00000000;
+						  //displayed_number <= 0;
+						  //flag <= 1;
+				win<=8'b00000000;
+				level=0;
+				panel_center = 4;
+				alreadyShoot = 0;
+				ball_x = 4;
+				ball_y = 6;
+				go_mode = 11;
+				point=0;
+			end
+			else
+			begin
+			   if(ball_y==6)
+				begin
+					if((ball_x==panel_center||ball_x==panel_center+1||ball_x==panel_center-1))//打到板子
+					begin
+						if(ball_x==panel_center)
+						begin
+							ball_y=ball_y-1;
+							state[ball_x][ball_y]=1;
+							stateR[ball_x][ball_y]=1;
+							stateG[ball_x][ball_y]=1;
+							stateB[ball_x][ball_y]=1;
+							go_mode=11;
+						end
+						else if(ball_x==panel_center-1)//打到底板左邊
+						begin
+							ball_x=ball_x-1;
+							ball_y=ball_y-1;
+							state[ball_x][ball_y]=1;
+							stateR[ball_x][ball_y]=1;
+							stateG[ball_x][ball_y]=1;
+							stateB[ball_x][ball_y]=1;
+							go_mode=12;
+						end
+						else//打到底板右邊
+						begin
+							ball_x=ball_x+1;
+							ball_y=ball_y-1;
+							state[ball_x][ball_y]=1;
+							stateR[ball_x][ball_y]=1;
+							stateG[ball_x][ball_y]=1;
+							stateB[ball_x][ball_y]=1;
+							go_mode=13;
+						end
+					end
+					else
+					begin//y+1
+						ball_x=ball_x+1;
+						ball_y=ball_y+1;
+					end
+				end
+				else if(ball_x==7)//右邊界
+				begin
+				   if(state[ball_x-1][ball_y+1]==1)
+					begin
+					   state[ball_x-1][ball_y+1]=0;
+						stateR[ball_x-1][ball_y+1]=0;
+						stateG[ball_x-1][ball_y+1]=0;
+						stateB[ball_x-1][ball_y+1]=0;
+						point=point+1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=12;
+					end
+					else
+					begin
+						ball_x=ball_x-1;
+						ball_y=ball_y+1;
+						state[ball_x][ball_y]=1;
+						stateR[ball_x][ball_y]=1;
+						stateG[ball_x][ball_y]=1;
+						stateB[ball_x][ball_y]=1;
+						go_mode=22;
+					end
+				end
+				else if(state[ball_x+1][ball_y+1]==1)//打到磚塊
+				begin
+				   state[ball_x+1][ball_y+1]=0;
+					stateR[ball_x+1][ball_y+1]=0;
+					stateG[ball_x+1][ball_y+1]=0;
+					stateB[ball_x+1][ball_y+1]=0;
+					point=point+1;
+					ball_x=ball_x-1;
+					ball_y=ball_y-1;
+				   state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=12;//左上
+				end
+				else//持續右下
+				begin
+				   ball_x=ball_x+1;
+					ball_y=ball_y+1;
+				   state[ball_x][ball_y]=1;
+					stateR[ball_x][ball_y]=1;
+					stateG[ball_x][ball_y]=1;
+					stateB[ball_x][ball_y]=1;
+					go_mode=23;
+				end
+			end
+		end	
+		endcase//6
+   end//end of alreadyShoot
+  end
+  
+  //mode 2 //不同模式，沒成
+      /*
+       else if(game_mode[1])
+                begin
+                  COM[0]=1;
+                  COM[1]=1;
+                  COM[2]=1;
+                  count_backward_180(CLK,clear_180,T_count_0,T_count_1,T_count_2,time_up_180);
+                  game_level = 1;
+                  if(point == 24)
+                      begin
+                            stateR[0] = 8'b00000000;            
+                            stateR[1] = 8'b00000000;
+                            stateR[2] = 8'b01100110;
+                            stateR[3] = 8'b01100110;
+                            stateR[4] = 8'b00000000;
+                            stateR[5] = 8'b10000010;
+                            stateR[6] = 8'b01000100;
+                            stateR[7] = 8'b00110000;
+
+                            stateG[0] = 8'b00000000;            
+                            stateG[1] = 8'b00000000;
+                            stateG[2] = 8'b00000000;
+                            stateG[3] = 8'b00000000;
+                            stateG[4] = 8'b00000000;
+                            stateG[5] = 8'b00000000;
+                            stateG[6] = 8'b00000000;
+                            stateG[7] = 8'b00000000;
+
+                            stateB[0] = 8'b00000000;            
+                            stateB[1] = 8'b00000000;
+                            stateB[2] = 8'b01100110;
+                            stateB[3] = 8'b01100110;
+                            stateB[4] = 8'b00000000;
+                            stateB[5] = 8'b10000010;
+                            stateB[6] = 8'b01000100;
+                            stateB[7] = 8'b00110000;
+                            //beep:winning music
+                            //or_show we are going to next level, put on LCD
+                            
+                            start = 1;      //continue to next level
+                            game_level = game_level + 1;
+                            panel_center = 4;
+                            whichCol = 0;
+                            alreadyShoot = 0;   //check if the ball has been launched
+                            ball_x = 4;         //ball's starting x coordinate
+                            ball_y = 6;         //ball's starting y coordinate
+                            point = 0;  
+                        end        //end of point == 20
+                  else if(time_up_180&point<24)
+                        begin
+                            stateR[0] = 8'b00000000;
+                            stateR[1] = 8'b11100111;
+                            stateR[2] = 8'b01000010;
+                            stateR[3] = 8'b01000010;
+                            stateR[4] = 8'b00000000;
+                            stateR[5] = 8'b00111000;
+                            stateR[6] = 8'b01000100;
+                            stateR[7] = 8'b10000010;
+
+                            stateG[0] = 8'b00000000;
+                            stateG[1] = 8'b00000000;
+                            stateG[2] = 8'b00000000;
+                            stateG[3] = 8'b00000000;
+                            stateG[4] = 8'b00000000;
+                            stateG[5] = 8'b00000000;
+                            stateG[6] = 8'b00000000;
+                            stateG[7] = 8'b00000000;
+
+                            stateB[0] = 8'b00000000;
+                            stateB[1] = 8'b00000000;
+                            stateB[2] = 8'b00000000;
+                            stateB[3] = 8'b00000000;
+                            stateB[4] = 8'b00000000;
+                            stateB[5] = 8'b00000000;
+                            stateB[6] = 8'b00000000;
+                            stateB[7] = 8'b00000000;
+                            //beep:losing music
+                            //or_show you lose,put on LCD
+                        end
+                    if (shoot)
+                        begin
+                            state[ball_x][ball_y] = 0;
+                            stateR[ball_x][ball_y] = 0;
+                            stateG[ball_x][ball_y] = 0;
+                            stateB[ball_x][ball_y] = 0;
+                            state[panel_center - 1][7] = 0;        //panel dark start
+                            stateR[panel_center - 1][7] = 0;      // <- means the panel will gone after shoot
+                            stateG[panel_center - 1][7] = 0;
+                            stateB[panel_center - 1][7] = 0;
+                            state[panel_center][7] = 0;   
+                            stateR[panel_center][7] = 0;
+                            stateG[panel_center][7] = 0;
+                            stateB[panel_center][7] = 0;
+                            state[panel_center + 1][7] = 0;   
+                            stateR[panel_center + 1][7] = 0;
+                            stateG[panel_center + 1][7] = 0;
+                            stateB[panel_center + 1][7] = 0;  //panel dark end
+                            alreadyShoot = 1;
+                        end    //end of shoot
+                  
+                    if (alreadyShoot)
+                        begin
+                          case(go_mode)
+                          11:     //直上
+                          begin
+                              state[ball_x][ball_y] = 0;
+                              stateR[ball_x][ball_y] = 0;
+                              stateG[ball_x][ball_y] = 0;
+                              stateB[ball_x][ball_y] = 0;
+                              ball_y = ball_y - 1;
+                              if (state[ball_x][ball_y] == 1 && ball_y >= 0)     //hit a block
+                                  begin
+                                      blood[ball_x][ball_y] = blood[ball_x][ball_y] - 1;// blood - 1 code start
+                                      if(blood[ball_x]][ball_y] == 1)
+                                          begin
+                                              state[ball_x][ball_y] = 1;                
+                                              stateR[ball_x][ball_y] = 0;   
+                                              stateG[ball_x][ball_y] = 0;   
+                                              stateB[ball_x][ball_y] = 1;       
+                                          end
+                                      else if(blood[ball_x][ball_y] == 2)
+                                          begin
+                                              state[ball_x][ball_y] = 1;                
+                                              stateR[ball_x][ball_y] = 1;   
+                                              stateG[ball_x][ball_y] = 0;   
+                                              stateB[ball_x][ball_y] = 0;   
+                                          end
+                                      else if(blood[ball_x][ball_y] == 0)
+                                          begin
+                                              state[ball_x][ball_y] = 0;                        
+                                              stateR[ball_x][ball_y] = 0;
+                                              stateG[ball_x][ball_y] = 0;
+                                              stateB[ball_x][ball_y] = 0;
+                                          end                         //blood - 1 code end
+                                      point = point + 1;
+                                      ball_y = ball_y + 2;
+                                      state[ball_x][ball_y] = 1;        //ball's current position               
+                                      stateR[ball_x][ball_y] = 1;   
+                                      stateG[ball_x][ball_y] = 1;   
+                                      stateB[ball_x][ball_y] = 1;                           
+                                      go_mode = 21;     //  直下(下^直)
+                                      if (state[ball_x][ball_y - 2] == 1) //hit a block
+                                          begin     //could be deleted, not logically right       
+                                              state[ball_x][ball_y-2] = 0;                      
+                                              stateR[ball_x][ball_y-2] = 0;
+                                              stateG[ball_x][ball_y-2] = 0;
+                                              stateB[ball_x][ball_y-2] = 0;
+                                          end
+                                  end
+
+                              else if(ball_y < 0)                    //ball reaches the top
+                                  begin
+                                      ball_y = ball_y + 2;
+                                      state[ball_x][ball_y] = 1;                            
+                                      stateR[ball_x][ball_y] = 1;   
+                                      stateG[ball_x][ball_y] = 1;   
+                                      stateB[ball_x][ball_y] = 1;   
+                                      go_mode = 21;     //直下                        
+                                      if (state[ball_x][ball_y-2] == 1)          //hit a block
+                                          begin         //could be deleted, not logically right   
+                                              state[ball_x][ball_y - 2] = 0;
+                                              stateR[ball_x][ball_y - 2] = 0;
+                                              stateG[ball_x][ball_y - 2] = 0;
+                                              stateB[ball_x][ball_y - 2] = 0;
+                                          end
+                                  end
+
+                              else    // keep going up
+                                  begin
+                                          state[ball_x][ball_y] = 1;
+                                          stateR[ball_x][ball_y] = 1;
+                                          stateG[ball_x][ball_y] = 1;
+                                          stateB[ball_x][ball_y] = 1;
+                                  end
+                          end   //end of case 11
+
+                          12:     //左上
+                              begin
+                                  state[ball_x][ball_y] = 0;
+                                  stateR[ball_x][ball_y] = 0;
+                                  stateG[ball_x][ball_y] = 0;
+                                  stateB[ball_x][ball_y] = 0;
+                                  if (ball_x==0||ball_y==0)//左邊界或上邊界
+                                      begin
+                                      if(ball_x==0&&ball_y==0)//左上的腳
+                                          begin
+                                              ball_x=ball_x+1;
+                                              ball_y=ball_y+1;
+                                              state[ball_x][ball_y]=1;
+                                              stateR[ball_x][ball_y]=1;
+                                              stateG[ball_x][ball_y]=1;
+                                              stateB[ball_x][ball_y]=1;
+                                              go_mode= 23;
+                                          end
+                                      else if(ball_x==0)//左邊界
+                                          begin
+                                              if(state[ball_x+1][ball_y-1]==1)
+                                                  begin
+                                                      state[ball_x+1][ball_y-1]=0;
+                                                      stateR[ball_x+1][ball_y-1]=0;
+                                                      stateG[ball_x+1][ball_y-1]=0;
+                                                      stateB[ball_x+1][ball_y-1]=0;
+                                                      point=point+1;
+                                                      state[ball_x][ball_y]=1;
+                                                      stateR[ball_x][ball_y]=1;
+                                                      stateG[ball_x][ball_y]=1;
+                                                      stateB[ball_x][ball_y]=1;
+                                                      go_mode=23;       //右下 (下^右)
+                                                  end
+                                              else
+                                                  begin
+                                                      ball_x=ball_x+1;
+                                                      ball_y=ball_y-1;
+                                                      state[ball_x][ball_y]=1;
+                                                      stateR[ball_x][ball_y]=1;
+                                                      stateG[ball_x][ball_y]=1;
+                                                      stateB[ball_x][ball_y]=1;
+                                                      go_mode=13;       //右上 (上^右)
+                                                  end
+                                          end
+                                      else
+                                          begin
+                                              ball_x=ball_x-1;
+                                              ball_y=ball_y+1;
+                                              state[ball_x][ball_y]=1;
+                                              stateR[ball_x][ball_y]=1;
+                                              stateG[ball_x][ball_y]=1;
+                                              stateB[ball_x][ball_y]=1;
+                                              go_mode=22;       //左下 (下^左)
+                                          end           
+                                      end       //end of "if(ball_x==0||ball_y==0)"
+
+                                      else
+                                          begin
+                                              if(state[ball_x-1][ball_y-1]==1)//打到磚塊
+                                                  begin
+                                                      blood[ball_x-1][ball_y-1] = blood[ball_x-1][ball_y-1] - 1;//blood - 1 code start
+                                                      if(blood[ball_x-1][ball_y-1] == 1)
+                                                          begin
+                                                              state[ball_x-1][ball_y-1] = 1;                
+                                                              stateR[ball_x-1][ball_y-1] = 0;   
+                                                              stateG[ball_x-1][ball_y-1] = 0;   
+                                                              stateB[ball_x-1][ball_y-1] = 1;       
+                                                          end
+                                                      else if(blood[ball_x-1][ball_y-1] == 2)
+                                                          begin
+                                                              state[ball_x-1][ball_y-1] = 1;                
+                                                              stateR[ball_x-1][ball_y-1] = 1;   
+                                                              stateG[ball_x-1][ball_y-1] = 0;   
+                                                              stateB[ball_x-1][ball_y-1] = 0;   
+                                                          end
+                                                      else if(blood[ball_x-1][ball_y-1] == 0)
+                                                          begin
+                                                              state[ball_x-1][ball_y-1] = 0;                        
+                                                              stateR[ball_x-1][ball_y-1] = 0;
+                                                              stateG[ball_x-1][ball_y-1] = 0;
+                                                              stateB[ball_x-1][ball_y-1] = 0;
+                                                          end       //blood - 1 code end
+                                                      point=point+1;
+                                                      go_mode=23;//右下
+                                                  end
+                                              else
+                                                  begin
+                                                      ball_x=ball_x-1;
+                                                      ball_y=ball_y-1;
+                                                      state[ball_x][ball_y]=1;
+                                                      stateR[ball_x][ball_y]=1;
+                                                      stateG[ball_x][ball_y]=1;
+                                                      stateB[ball_x][ball_y]=1;
+                                                      go_mode=12;       //左上
+                                                  end
+                                          end
+                              end       //end of case 12
+
+                          13:     //右上 (上^右)
+                              begin
+                                  state[ball_x][ball_y] = 0;
+                                  stateR[ball_x][ball_y] = 0;
+                                  stateG[ball_x][ball_y] = 0;
+                                  stateB[ball_x][ball_y] = 0;
+                                  if (ball_x==7||ball_y==0)//右邊界或上邊界
+                                      begin
+                                          if(ball_x==7&&ball_y==0)//右上的腳
+                                              begin
+                                                  ball_x=ball_x-1;
+                                                  ball_y=ball_y+1;
+                                                  state[ball_x][ball_y]=1;
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;                                         
+                                                  go_mode= 22;  //左下
+                                              end
+                                          else if(ball_x==7)    //右邊界
+                                              begin
+                                                  if(state[ball_x-1][ball_y-1]==1)
+                                                      begin
+                                                          state[ball_x-1][ball_y-1]=0;
+                                                          stateR[ball_x-1][ball_y-1]=0;
+                                                          stateG[ball_x-1][ball_y-1]=0;
+                                                          stateB[ball_x-1][ball_y-1]=0;
+                                                          point=point+1;                                                    
+                                                          state[ball_x][ball_y]=1;
+                                                          stateR[ball_x][ball_y]=1;
+                                                          stateG[ball_x][ball_y]=1;
+                                                          stateB[ball_x][ball_y]=1;
+                                                          go_mode=22;        //左下
+                                                      end
+                                                  else
+                                                      begin
+                                                          ball_x=ball_x-1;
+                                                          ball_y=ball_y-1;
+                                                          state[ball_x][ball_y]=1;
+                                                          stateR[ball_x][ball_y]=1;
+                                                          stateG[ball_x][ball_y]=1;
+                                                          stateB[ball_x][ball_y]=1;
+                                                          go_mode=12;       //左上
+                                                      end
+                                              end
+                                          else  //上邊界
+                                              begin
+                                                  ball_x=ball_x+1;
+                                                  ball_y=ball_y+1;                                          
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;
+                                                  state[ball_x][ball_y]=1;
+                                                  go_mode=23;
+                                              end           
+                                      end
+
+                                  else  //沒有打到邊界們
+                                      begin
+                                          if(state[ball_x+1][ball_y-1]==1)//打到磚塊
+                                              begin
+                                                  blood[ball_x+1][ball_y-1] = blood[ball_x+1][ball_y-1] - 1;
+                                                  //blood - 1 code start
+                                                  if(blood[ball_x+1][ball_y-1] == 1)
+                                                      begin
+                                                          state[ball_x+1][ball_y-1] = 1;                
+                                                          stateR[ball_x+1][ball_y-1] = 0;   
+                                                          stateG[ball_x+1][ball_y-1] = 0;   
+                                                          stateB[ball_x+1][ball_y-1] = 1;       
+                                                      end
+                                                  else if(blood[ball_x+1][ball_y-1] == 2)
+                                                      begin
+                                                          state[ball_x+1][ball_y-1] = 1;                
+                                                          stateR[ball_x+1][ball_y-1] = 1;   
+                                                          stateG[ball_x+1][ball_y-1] = 0;   
+                                                          stateB[ball_x+1][ball_y-1] = 0;   
+                                                      end
+                                                  else if(blood[ball_x+1][ball_y-1] == 0)
+                                                      begin
+                                                          state[ball_x+1][ball_y-1] = 0;                        
+                                                          stateR[ball_x+1][ball_y-1] = 0;
+                                                          stateG[ball_x+1][ball_y-1] = 0;
+                                                          stateB[ball_x+1][ball_y-1] = 0;
+                                                      end                                 
+                                                  //blood - 1 code end
+                                                  point=point+1;                                            
+                                                  go_mode=22;//左下
+                                              end
+                                          else  //持續右上
+                                              begin
+                                                  ball_x=ball_x+1;
+                                                  ball_y=ball_y-1;
+                                                  state[ball_x][ball_y]=1;
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;
+                                                  go_mode=13;        //右上                                       
+                                              end
+                                      end
+                              end       //end of case 13
+
+                          21:      //直下
+                              begin
+                                  state[ball_x][ball_y] = 0;
+                                  stateR[ball_x][ball_y] = 0;
+                                  stateG[ball_x][ball_y] = 0;
+                                  stateB[ball_x][ball_y] = 0;
+                                  if (ball_y==7)
+                                      begin
+                                          //beep
+                                          //level=0;
+                                          panel_center = 4;
+                                          alreadyShoot = 0;
+                                          ball_x = 4;
+                                          ball_y = 6;
+                                          go_mode = 11;      //直上
+                                      end
+                                  else    //一直往下
+                                      begin
+                                          if(state[ball_x][ball_y+1] == 1)
+                                              begin
+                                                  state[ball_x][ball_y+1] = 0;
+                                                  stateR[ball_x][ball_y+1] = 0;
+                                                  stateG[ball_x][ball_y+1] = 0;
+                                                  stateB[ball_x][ball_y+1] = 0;
+                                                  point=point+1;
+                                                  ball_y = ball_y - 1;
+                                                  state[ball_x][ball_y] = 1;
+                                                  stateR[ball_x][ball_y] = 1;
+                                                  stateG[ball_x][ball_y] = 1;
+                                                  stateB[ball_x][ball_y] = 1;
+                                                  go_mode=11;
+                                              end
+                                          else
+                                              begin
+                                                  ball_y = ball_y + 1;
+                                                  state[ball_x][ball_y] = 1;
+                                                  stateR[ball_x][ball_y] = 1;
+                                                  stateG[ball_x][ball_y] = 1;
+                                                  stateB[ball_x][ball_y] = 1;
+                                              end
+                                          end
+                              end       //end of case 21
+
+                          22:      //左下
+                              begin
+                                  state[ball_x][ball_y] = 0;
+                                  stateR[ball_x][ball_y] = 0;
+                                  stateG[ball_x][ball_y] = 0;
+                                  stateB[ball_x][ball_y] = 0;
+                                  if(ball_y==7)
+                                      begin
+                                          //beep
+                                          level=0;
+                                          panel_center = 4;
+                                          alreadyShoot = 0;
+                                          ball_x = 4;
+                                          ball_y = 6;
+                                          go_mode = 11;      //直上
+                                      end
+                                  else
+                                      begin
+                                          if(ball_y==6)
+                                              begin
+                                                   //y+1
+                                                  ball_x=ball_x-1;
+                                                  ball_y=ball_y+1;      
+                                              end
+                                          else if(ball_x==0)//左邊界
+                                              begin
+                                                  if(state[ball_x+1][ball_y+1]==1)
+                                                      begin
+                                                          state[ball_x+1][ball_y+1]=0;
+                                                          stateR[ball_x+1][ball_y+1]=0;
+                                                          stateG[ball_x+1][ball_y+1]=0;
+                                                          stateB[ball_x+1][ball_y+1]=0;
+                                                          point=point+1;
+                                                          state[ball_x][ball_y]=1;
+                                                          stateR[ball_x][ball_y]=1;
+                                                          stateG[ball_x][ball_y]=1;
+                                                          stateB[ball_x][ball_y]=1;
+                                                          go_mode=13;       //右上
+                                                      end
+                                                  else
+                                                      begin
+                                                          ball_x=ball_x+1;
+                                                          ball_y=ball_y+1;
+                                                          state[ball_x][ball_y]=1;
+                                                          stateR[ball_x][ball_y]=1;
+                                                          stateG[ball_x][ball_y]=1;
+                                                          stateB[ball_x][ball_y]=1;
+                                                          go_mode=23;
+                                                      end
+                                              end
+                                          else if(state[ball_x-1][ball_y+1]==1)//打到磚塊
+                                              begin
+                                                  if(blood[ball_x-1][ball_y+1] == 1)
+                                                      begin
+                                                          state[ball_x-1][ball_y+1] = 1;                
+                                                          stateR[ball_x-1][ball_y+1] = 0;   
+                                                          stateG[ball_x-1][ball_y+1] = 0;   
+                                                          stateB[ball_x-1][ball_y+1] = 1;       
+                                                      end
+                                                  else if(blood[ball_x-1][ball_y+1] == 2)
+                                                      begin
+                                                          state[ball_x-1][ball_y+1] = 1;                
+                                                          stateR[ball_x-1][ball_y+1] = 1;   
+                                                          stateG[ball_x-1][ball_y+1] = 0;   
+                                                          stateB[ball_x-1][ball_y+1] = 0;   
+                                                      end
+                                                  else if(blood[ball_x-1][ball_y+1] == 0)
+                                                      begin
+                                                          state[ball_x-1][ball_y+1] = 0;                        
+                                                          stateR[ball_x-1][ball_y+1] = 0;
+                                                          stateG[ball_x-1][ball_y+1] = 0;
+                                                          stateB[ball_x-1][ball_y+1] = 0;
+                                                      end             
+                                                  //blood - 1 code end
+                                                  point=point+1;
+                                                  ball_x=ball_x+1;
+                                                  ball_y=ball_y-1;
+                                                  state[ball_x][ball_y]=1;
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;
+                                                  go_mode=13;       //右上
+                                              end
+                                          else//持續左下
+                                              begin
+                                                  ball_x=ball_x-1;
+                                                  ball_y=ball_y+1;
+                                                  state[ball_x][ball_y]=1;
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;
+                                                  go_mode=22;        //左下
+                                              end
+                                      end
+                              end
+                          23:      //右下
+                              begin
+                                  state[ball_x][ball_y] = 0;
+                                  stateR[ball_x][ball_y] = 0;
+                                  stateG[ball_x][ball_y] = 0;
+                                  stateB[ball_x][ball_y] = 0;
+                                  if(ball_y==7)
+                                      begin
+                                          //beep
+                                          level=0;
+                                          panel_center = 4;
+                                          alreadyShoot = 0;
+                                          ball_x = 4;
+                                          ball_y = 6;
+                                          go_mode = 11;      //直上
+                                      end
+                                  else
+                                      begin
+                                          if(ball_y==6)
+                                              begin
+                                                  //y+1
+                                                  ball_x=ball_x+1;
+                                                  ball_y=ball_y+1;
+                                              end
+                                          else if(ball_x==7)//右邊界
+                                              begin
+                                                  if(state[ball_x-1][ball_y+1]==1)
+                                                      begin
+                                                          state[ball_x-1][ball_y+1]=0;
+                                                          stateR[ball_x-1][ball_y+1]=0;
+                                                          stateG[ball_x-1][ball_y+1]=0;
+                                                          stateB[ball_x-1][ball_y+1]=0;
+                                                          point=point+1;
+                                                          state[ball_x][ball_y]=1;
+                                                          stateR[ball_x][ball_y]=1;
+                                                          stateG[ball_x][ball_y]=1;
+                                                          stateB[ball_x][ball_y]=1;
+                                                          go_mode=12;       //左上
+                                                      end
+                                                  else
+                                                      begin
+                                                          ball_x=ball_x-1;
+                                                          ball_y=ball_y+1;
+                                                          state[ball_x][ball_y]=1;
+                                                          stateR[ball_x][ball_y]=1;
+                                                          stateG[ball_x][ball_y]=1;
+                                                          stateB[ball_x][ball_y]=1;
+                                                          go_mode=22;       //左下
+                                                      end
+                                              end
+                                          else if(state[ball_x+1][ball_y+1]==1)//打到磚塊
+                                              begin
+                                                  if(blood[ball_x+1][ball_y+1] == 1)
+                                                      begin
+                                                          state[ball_x+1][ball_y+1] = 1;                
+                                                          stateR[ball_x+1][ball_y+1] = 0;   
+                                                          stateG[ball_x+1][ball_y+1] = 0;   
+                                                          stateB[ball_x+1][ball_y+1] = 1;       
+                                                      end
+                                                  else if(blood[ball_x+1][ball_y+1] == 2)
+                                                      begin
+                                                          state[ball_x+1][ball_y+1] = 1;                
+                                                          stateR[ball_x+1][ball_y+1] = 1;   
+                                                          stateG[ball_x+1][ball_y+1] = 0;   
+                                                          stateB[ball_x+1][ball_y+1] = 0;   
+                                                      end
+                                                  else if(blood[ball_x+1][ball_y+1] == 0)
+                                                      begin
+                                                          state[ball_x+1][ball_y+1] = 0;                        
+                                                          stateR[ball_x+1][ball_y+1] = 0;
+                                                          stateG[ball_x+1][ball_y+1] = 0;
+                                                          stateB[ball_x+1][ball_y+1] = 0;
+                                                      end          
+                                                  //blood - 1 code end
+                                                  point=point+1;
+                                                  ball_x=ball_x-1;
+                                                  ball_y=ball_y-1;
+                                                  state[ball_x][ball_y]=1;
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;
+                                                  go_mode=12;//左上
+                                              end
+                                          else//持續右下
+                                              begin
+                                                  ball_x=ball_x+1;
+                                                  ball_y=ball_y+1;
+                                                  state[ball_x][ball_y]=1;
+                                                  stateR[ball_x][ball_y]=1;
+                                                  stateG[ball_x][ball_y]=1;
+                                                  stateB[ball_x][ball_y]=1;
+                                                  go_mode=23;       //右下
+                                              end
+                                      end
+                              end       //end of case 23    
+                        endcase    // end of case(go_mode)
+                    end    // end of alreadyShoot
+                end
+      */
+    
+//continue mode 3
+end
+
+always @(posedge CLK_div)
+begin
+	whichCol = whichCol + 1;
+end
+assign EN=1;
+assign lightR = ~stateR[whichCol];
+assign lightG = ~stateG[whichCol];
+assign lightB = ~stateB[whichCol];
+
+endmodule
+
+
+//辛苦助教看完他，ㄅ歉我們盡力了QQ 第五組祝您們新~年~快~樂~~^_^
