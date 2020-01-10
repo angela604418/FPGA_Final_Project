@@ -4,7 +4,7 @@
 > 107214005 田蕙瑜
 > 107321004 蕭名誼
 > 107321002 陳靖雯
-
+---
 ### Input / Output to FPGA board
 - 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
 
@@ -29,7 +29,7 @@
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
 
 
-
+---
 ### Four game level
 - Level 1
 
@@ -37,7 +37,7 @@
 
 - Level 2
 
-![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level2.png)
+![](![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level2.png))
 
 - Level 3
 
@@ -47,6 +47,7 @@
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level4.png)
 
+---
 ### Result Demonstration
 
 - Success picture
@@ -57,10 +58,12 @@
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/fail.png)
 
+---
 ### Function description
 - 闖關只有一個球的機會，可左右移動底版以便接球
 - 可將球反彈向上敲打磚塊，打擊一個即得一分
 - 若在球掉落前累積得到8分則可過關；反之，若在得到8分前讓球掉落至底板以下，即未接到球，則失敗。
+
 
 ### Program module description
 ```verilog=
