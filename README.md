@@ -1,18 +1,13 @@
 # FPGA_Final_Project
 
 ## Team 5
-> 107214005 田惠瑜
+> 107214005 田蕙瑜
 > 107321004 蕭名誼
 > 107321002 陳靖雯
 
 #### Input / Output to FPGA board
-- 8 x 8 LED matrix for displaying live game 
-
-- LED light to record points
-
-- Seven segments display showing the counter
-
-
+- 8 x 8 LED
+![pic](https://drive.google.com/open?id=1gjqu5B8v7i8cUXpQzY_e0AOqcqWjhE3j"8 x 8 LED") 
 
 
 
