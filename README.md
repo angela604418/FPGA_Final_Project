@@ -7,7 +7,8 @@
 
 #### Input / Output to FPGA board
 - 8 x 8 LED
-![pic](https://drive.google.com/open?id=1gjqu5B8v7i8cUXpQzY_e0AOqcqWjhE3j"8 x 8 LED") 
+
+![pic](https://drive.google.com/open?id=1gjqu5B8v7i8cUXpQzY_e0AOqcqWjhE3j) 
 
 
 
