@@ -8,38 +8,54 @@
 ### Input / Output to FPGA board
 - 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
 
-![]()
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level1.png)
+
 - LED light to record points (win -> LED)
 
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/points.png)
 
 - Seven segments display showing the counter (COM, LED_seg -> 7 segments display)(4 digits)
 
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/seg.png)
 
 - Four bits switch (sw_L, sw_R, shoot -> 4 bit SW)
 
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/switch.png)
 
 - Dip switch (pause, back, clear -> dip switch)
 
-![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/switch.png)
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/clear_pause.png)
+
 - Buzzer to create pleasant atmosphere (beep -> buzzer)
+
+
 
 ### Four game level
 - Level 1
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level1.png)
+
 - Level 2
 
 ![](![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level2.png))
+
 - Level 3
+
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level3.png)
 
 - Level 4
 
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level4.png)
 
 ### Result Demonstration
 
 - Success picture
 
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/success.png)
+
 - Fail picture
+
+![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/fail.png)
 
 ### Function description
 - 闖關只有一個球的機會，可左右移動底版以便接球
