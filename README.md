@@ -6,27 +6,27 @@
 > 107321002 陳靖雯
 
 ### Input / Output to FPGA board
-- 8 x 8 LED matrix for displaying live game (lightB, lightG, lightR, whichCol, EN -> 8x8 matrix)
+- 8 x 8 LED matrix for displaying live game (`lightB`, `lightG`, `lightR`, `whichCol`, `EN` -> 8x8 matrix)
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level1.png)
 
-- LED light to record points (win -> LED)
+- LED light to record points (`win` -> LED)
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/points.png)
 
-- Seven segments display showing the counter (COM, LED_seg -> 7 segments display)(4 digits)
+- Seven segments display showing the counter (`COM`, `LED_seg` -> 7 segments display)(4 digits)
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/seg.png)
 
-- Four bits switch (sw_L, sw_R, shoot -> 4 bit SW)
+- Four bits switch (`sw_L`, `sw_R`, `shoot` -> 4 bit SW)
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/switch.png)
 
-- Dip switch (pause, back, clear -> dip switch)
+- Dip switch (`pause`, `back`, `clear` -> dip switch)
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/clear_pause.png)
 
-- Buzzer to create pleasant atmosphere (beep -> buzzer)
+- Buzzer to create pleasant atmosphere (`beep` -> buzzer)
 
 
 ---
