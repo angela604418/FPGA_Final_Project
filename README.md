@@ -6,7 +6,7 @@
 > 107321002 陳靖雯
 
 ### Input / Output to FPGA board
-- 8 x 8 LED matrix for displaying live game (`lightB`, `lightG`, `lightR`, `whichCol`, `EN` -> 8x8 matrix)
+- 8 x 8 LED matrix for displaying games (`lightB`, `lightG`, `lightR`, `whichCol`, `EN` -> 8x8 matrix)
 
 ![](https://github.com/angela604418/FPGA_Final_Project/blob/master/Images/level1.png)
 
